@@ -4,6 +4,8 @@ const DEFAULTS = {
   maxZoom: 6,
   zoom: 1,
   clusterRadiusPx: 24,
+  tickLabelFormatter: null,
+  tickMinSpacingPx: 90,
   enableAutoSplits: false,
   manualSplits: [],
   splitThresholdMs: 1000 * 60 * 60 * 24 * 30,
@@ -215,6 +217,8 @@ export class TimelineWidget {
     const size = this.options.orientation === "horizontal" ? this.viewport.clientWidth : this.viewport.clientHeight;
     const pixelsPerMs = size / range;
 
+    this.renderTicks(start, end, pixelsPerMs, size);
+
     const tracks = this.tracks.length ? this.tracks : [{ id: "default", label: "" }];
 
     tracks.forEach((track) => {
@@ -296,6 +300,187 @@ export class TimelineWidget {
     if (this.options.rangeSelection) {
       this.renderRangeSelection(start, end, pixelsPerMs);
     }
+  }
+
+  renderTicks(start, end, pixelsPerMs, size) {
+    const ticks = this.buildTicks(start, end, size);
+    if (!ticks.length) {
+      return;
+    }
+
+    const tickLayer = document.createElement("div");
+    tickLayer.className = "timeline-ticks";
+
+    ticks.forEach((tick) => {
+      const tickEl = document.createElement("div");
+      tickEl.className = "timeline-tick";
+      if (this.options.orientation === "horizontal") {
+        tickEl.style.left = `${(tick.time - start) * pixelsPerMs}px`;
+      } else {
+        tickEl.style.top = `${(tick.time - start) * pixelsPerMs}px`;
+      }
+
+      const label = document.createElement("span");
+      label.className = "timeline-tick-label";
+      label.textContent = tick.label;
+      tickEl.append(label);
+
+      tickLayer.append(tickEl);
+    });
+
+    this.viewport.append(tickLayer);
+  }
+
+  buildTicks(start, end, size) {
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+      return [];
+    }
+    const targetCount = Math.max(2, Math.floor(size / this.options.tickMinSpacingPx));
+    const rangeMs = end - start;
+    const interval = this.chooseTickInterval(rangeMs, targetCount);
+    if (!interval) {
+      return [];
+    }
+
+    const formatter =
+      typeof this.options.tickLabelFormatter === "function"
+        ? this.options.tickLabelFormatter
+        : (time) => new Date(time).toISOString();
+
+    const ticks = [];
+    let current = this.alignTimeToInterval(start, interval);
+    while (current <= end) {
+      ticks.push({
+        time: current,
+        label: formatter(current, interval)
+      });
+      current = this.advanceTime(current, interval);
+      if (!Number.isFinite(current)) {
+        break;
+      }
+    }
+
+    return ticks;
+  }
+
+  chooseTickInterval(rangeMs, targetCount) {
+    const desiredMs = rangeMs / targetCount;
+    const intervals = [
+      { unit: "second", step: 1, approxMs: 1000 },
+      { unit: "second", step: 5, approxMs: 5000 },
+      { unit: "second", step: 15, approxMs: 15000 },
+      { unit: "second", step: 30, approxMs: 30000 },
+      { unit: "minute", step: 1, approxMs: 60 * 1000 },
+      { unit: "minute", step: 5, approxMs: 5 * 60 * 1000 },
+      { unit: "minute", step: 15, approxMs: 15 * 60 * 1000 },
+      { unit: "minute", step: 30, approxMs: 30 * 60 * 1000 },
+      { unit: "hour", step: 1, approxMs: 60 * 60 * 1000 },
+      { unit: "hour", step: 3, approxMs: 3 * 60 * 60 * 1000 },
+      { unit: "hour", step: 6, approxMs: 6 * 60 * 60 * 1000 },
+      { unit: "hour", step: 12, approxMs: 12 * 60 * 60 * 1000 },
+      { unit: "day", step: 1, approxMs: 24 * 60 * 60 * 1000 },
+      { unit: "week", step: 1, approxMs: 7 * 24 * 60 * 60 * 1000 },
+      { unit: "month", step: 1, approxMs: 30 * 24 * 60 * 60 * 1000 },
+      { unit: "quarter", step: 1, approxMs: 91 * 24 * 60 * 60 * 1000 },
+      { unit: "year", step: 1, approxMs: 365 * 24 * 60 * 60 * 1000 },
+      { unit: "year", step: 2, approxMs: 2 * 365 * 24 * 60 * 60 * 1000 },
+      { unit: "year", step: 5, approxMs: 5 * 365 * 24 * 60 * 60 * 1000 }
+    ];
+
+    return intervals.find((interval) => interval.approxMs >= desiredMs) ?? intervals[intervals.length - 1];
+  }
+
+  alignTimeToInterval(timeMs, interval) {
+    const date = new Date(timeMs);
+    const { unit, step } = interval;
+    const aligned = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+
+    if (unit === "second") {
+      aligned.setUTCSeconds(Math.floor(date.getUTCSeconds() / step) * step, 0);
+      aligned.setUTCMilliseconds(0);
+      aligned.setUTCMinutes(date.getUTCMinutes());
+      aligned.setUTCHours(date.getUTCHours());
+      return aligned.getTime();
+    }
+
+    if (unit === "minute") {
+      aligned.setUTCMinutes(Math.floor(date.getUTCMinutes() / step) * step, 0, 0);
+      aligned.setUTCHours(date.getUTCHours());
+      return aligned.getTime();
+    }
+
+    if (unit === "hour") {
+      aligned.setUTCHours(Math.floor(date.getUTCHours() / step) * step, 0, 0, 0);
+      return aligned.getTime();
+    }
+
+    if (unit === "day") {
+      const day = Math.floor(date.getUTCDate() / step) * step || 1;
+      aligned.setUTCDate(day);
+      return aligned.getTime();
+    }
+
+    if (unit === "week") {
+      const dayOfWeek = (aligned.getUTCDay() + 6) % 7;
+      aligned.setUTCDate(aligned.getUTCDate() - dayOfWeek);
+      return aligned.getTime();
+    }
+
+    if (unit === "month") {
+      const month = Math.floor(date.getUTCMonth() / step) * step;
+      return Date.UTC(date.getUTCFullYear(), month, 1);
+    }
+
+    if (unit === "quarter") {
+      const quarter = Math.floor(date.getUTCMonth() / 3) * 3;
+      return Date.UTC(date.getUTCFullYear(), quarter, 1);
+    }
+
+    if (unit === "year") {
+      const year = Math.floor(date.getUTCFullYear() / step) * step;
+      return Date.UTC(year, 0, 1);
+    }
+
+    return date.getTime();
+  }
+
+  advanceTime(timeMs, interval) {
+    const date = new Date(timeMs);
+    const { unit, step } = interval;
+
+    if (unit === "second") {
+      return date.getTime() + step * 1000;
+    }
+
+    if (unit === "minute") {
+      return date.getTime() + step * 60 * 1000;
+    }
+
+    if (unit === "hour") {
+      return date.getTime() + step * 60 * 60 * 1000;
+    }
+
+    if (unit === "day") {
+      return date.getTime() + step * 24 * 60 * 60 * 1000;
+    }
+
+    if (unit === "week") {
+      return date.getTime() + step * 7 * 24 * 60 * 60 * 1000;
+    }
+
+    if (unit === "month") {
+      return Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + step, 1);
+    }
+
+    if (unit === "quarter") {
+      return Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + step * 3, 1);
+    }
+
+    if (unit === "year") {
+      return Date.UTC(date.getUTCFullYear() + step, 0, 1);
+    }
+
+    return timeMs;
   }
 
   buildLineSegments(start, end) {

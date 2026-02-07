@@ -72,6 +72,36 @@ body {
   margin-bottom: var(--timeline-track-gap);
 }
 
+.timeline-ticks {
+  position: absolute;
+  inset: 8px 16px auto 16px;
+  height: 24px;
+  pointer-events: none;
+  color: #334155;
+  font-size: 0.75rem;
+}
+
+.timeline-tick {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transform: translateX(-50%);
+}
+
+.timeline-tick::before {
+  content: "";
+  width: 1px;
+  height: 8px;
+  background: rgba(51, 65, 85, 0.4);
+}
+
+.timeline-tick-label {
+  white-space: nowrap;
+}
+
 .timeline-track:last-child {
   margin-bottom: 0;
 }
@@ -159,6 +189,23 @@ body {
   margin-bottom: 0;
   margin-right: var(--timeline-track-gap);
   min-height: 220px;
+}
+
+.timeline-widget.vertical .timeline-ticks {
+  inset: 16px auto 16px 8px;
+  width: 80px;
+  height: auto;
+}
+
+.timeline-widget.vertical .timeline-tick {
+  left: 0;
+  transform: translateY(-50%);
+  flex-direction: row;
+}
+
+.timeline-widget.vertical .timeline-tick::before {
+  width: 8px;
+  height: 1px;
 }
 
 .timeline-widget.vertical .timeline-line-segment {
