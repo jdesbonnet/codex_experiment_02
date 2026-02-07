@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Timeline Widget Demo</title>
+    <link rel="stylesheet" href="timeline.css" />
+  </head>
+  <body>
+    <main class="demo">
+      <h1>Timeline Widget</h1>
+      <div id="timeline" class="timeline-host"></div>
+    </main>
+
+    <script type="module">
+      import { TimelineWidget } from "./timeline.js";
+
+      const timeline = new TimelineWidget(document.getElementById("timeline"), {
+        orientation: "horizontal",
+        enableAutoSplits: true,
+        splitThresholdMs: 1000 * 60 * 60 * 24 * 14,
+        tracks: [
+          { id: "track-1", label: "Design" },
+          { id: "track-2", label: "Build" },
+          { id: "track-3", label: "Launch" }
+        ],
+        rangeSelection: true,
+        defaultIcon: "●"
+      });
+
+      timeline.setEvents([
+        {
+          id: "evt-1",
+          title: "Kickoff",
+          time: new Date("2024-01-01").getTime(),
+          trackId: "track-1"
+        },
+        {
+          id: "evt-2",
+          title: "Research Sprint",
+          start: new Date("2024-01-02").getTime(),
+          end: new Date("2024-01-12").getTime(),
+          trackId: "track-1"
+        },
+        {
+          id: "evt-3",
+          title: "Prototype",
+          time: new Date("2024-02-05").getTime(),
+          trackId: "track-2",
+          icon: "◆"
+        },
+        {
+          id: "evt-4",
+          title: "Beta",
+          start: new Date("2024-02-10").getTime(),
+          end: new Date("2024-03-01").getTime(),
+          trackId: "track-2"
+        },
+        {
+          id: "evt-5",
+          title: "Launch",
+          time: new Date("2024-04-10").getTime(),
+          trackId: "track-3"
+        }
+      ]);
+
+      timeline.on("select", (event) => {
+        console.log("Selected", event);
+      });
+
+      timeline.on("zoom", (zoom) => {
+        console.log("Zoom", zoom);
+      });
+
+      timeline.on("move", (centerTime) => {
+        console.log("Center time", new Date(centerTime));
+      });
+    </script>
+  </body>
+</html>
