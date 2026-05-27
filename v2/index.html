@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Timeline Widget v2 — Demo</title>
+  <link rel="stylesheet" href="timeline.css" />
+  <style>
+    :root {
+      --ink: #1f2329;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --accent: #4f46e5;
+      --bg: #f7f7f9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 48px 24px;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+    }
+    main { max-width: 920px; margin: 0 auto; }
+    h1 { font-size: 22px; font-weight: 650; margin: 0 0 4px; letter-spacing: -0.01em; }
+    p.lede { margin: 0 0 28px; color: var(--muted); font-size: 14px; }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    button, .toggle {
+      font: inherit;
+      font-size: 13px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 7px 12px;
+      cursor: pointer;
+      transition: border-color 0.12s ease, background 0.12s ease;
+    }
+    button:hover, .toggle:hover { border-color: #c7cad0; }
+    .toggle { display: inline-flex; align-items: center; gap: 7px; user-select: none; }
+    .toggle input { accent-color: var(--accent); margin: 0; }
+    .sep { flex: 1; }
+    .readout {
+      font-size: 12px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    #timeline { margin-top: 4px; }
+    .hint { margin-top: 14px; font-size: 12.5px; color: var(--muted); }
+    code { background: #ececed; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Timeline Widget</h1>
+    <p class="lede">A lightweight, dependency-free timeline. Drag to pan, scroll to zoom, click a cluster to zoom in.</p>
+
+    <div class="toolbar">
+      <button id="zoom-in">Zoom in</button>
+      <button id="zoom-out">Zoom out</button>
+      <button id="reset">Reset</button>
+      <label class="toggle"><input type="checkbox" id="vertical" /> Vertical</label>
+      <label class="toggle"><input type="checkbox" id="range" checked /> Range select</label>
+      <label class="toggle"><input type="checkbox" id="splits" /> Auto splits</label>
+      <span class="sep"></span>
+      <span class="readout" id="readout"></span>
+    </div>
+
+    <div id="timeline"></div>
+
+    <p class="hint">Last selected: <code id="selected">none</code></p>
+  </main>
+
+  <script type="module">
+    import { TimelineWidget } from "./timeline.js";
+
+    const DAY = 86400000;
+    const base = new Date(2026, 0, 6, 9, 0, 0).getTime(); // Jan 6 2026
+
+    const tracks = [
+      { id: "design", label: "Design" },
+      { id: "build", label: "Build" },
+      { id: "release", label: "Release" },
+    ];
+
+    // A mix of point events (some tightly clustered) and ranges, plus a long
+    // gap before the final cluster so "Auto splits" has something to do.
+    const events = [
+      { id: "d1", title: "Kickoff", time: base, trackId: "design", icon: "★" },
+      { id: "d2", title: "Research", time: base + DAY * 2, trackId: "design" },
+      { id: "d3", title: "Wireframes", time: base + DAY * 2 + 3600000 * 5, trackId: "design" },
+      { id: "d4", title: "Design review", time: base + DAY * 9, trackId: "design", icon: "◆" },
+      { id: "d5", title: "Spec ready", time: base + DAY * 14, trackId: "design" },
+
+      { id: "b1", title: "Sprint 1", start: base + DAY * 16, end: base + DAY * 30, trackId: "build" },
+      { id: "b2", title: "Sprint 2", start: base + DAY * 32, end: base + DAY * 46, trackId: "build" },
+      { id: "b3", title: "Bugfix", time: base + DAY * 33, trackId: "build" },
+      { id: "b4", title: "Bugfix", time: base + DAY * 33 + 3600000 * 8, trackId: "build" },
+      { id: "b5", title: "Bugfix", time: base + DAY * 34, trackId: "build" },
+      { id: "b6", title: "Code freeze", time: base + DAY * 48, trackId: "build", icon: "◆" },
+
+      { id: "r1", title: "Beta", time: base + DAY * 50, trackId: "release" },
+      { id: "r2", title: "RC build", start: base + DAY * 52, end: base + DAY * 55, trackId: "release" },
+      { id: "r3", title: "Launch", time: base + DAY * 57, trackId: "release", icon: "★" },
+
+      // Long gap, then a retrospective months later.
+      { id: "x1", title: "Retro", time: base + DAY * 150, trackId: "release", icon: "◆" },
+      { id: "x2", title: "v1.1 planning", time: base + DAY * 152, trackId: "design" },
+    ];
+
+    const readout = document.getElementById("readout");
+    const selected = document.getElementById("selected");
+
+    let timeline;
+
+    function build() {
+      if (timeline) timeline.destroy();
+      timeline = new TimelineWidget(document.getElementById("timeline"), {
+        orientation: document.getElementById("vertical").checked ? "vertical" : "horizontal",
+        rangeSelection: document.getElementById("range").checked,
+        enableAutoSplits: document.getElementById("splits").checked,
+        tracks,
+        defaultIcon: "●",
+      });
+      timeline.setEvents(events);
+      timeline.on("zoom", (z) => updateReadout(z));
+      timeline.on("select", (e) => { selected.textContent = e.title || e.id; });
+      updateReadout(timeline.zoom);
+    }
+
+    function updateReadout(z) {
+      readout.textContent = `zoom ${z.toFixed(2)}×`;
+    }
+
+    document.getElementById("zoom-in").onclick = () => timeline.setZoom(timeline.zoom * 1.4);
+    document.getElementById("zoom-out").onclick = () => timeline.setZoom(timeline.zoom / 1.4);
+    document.getElementById("reset").onclick = () => { timeline.setZoom(1); timeline.setEvents(events); };
+    for (const id of ["vertical", "range", "splits"]) {
+      document.getElementById(id).onchange = build;
+    }
+
+    build();
+  </script>
+</body>
+</html>

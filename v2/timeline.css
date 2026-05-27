@@ -1,0 +1,350 @@
+/* Timeline Widget (v2) — clean, minimal styling. */
+
+.tlw {
+  --tlw-bg: #ffffff;
+  --tlw-fg: #1f2329;
+  --tlw-muted: #8a909a;
+  --tlw-line: #ededf1;
+  --tlw-line-strong: #d7dade;
+  --tlw-accent: #4f46e5;
+  --tlw-accent-soft: rgba(79, 70, 229, 0.12);
+  --tlw-label: 104px;
+  --tlw-label-h: 30px;
+  --tlw-lane: 52px;
+
+  box-sizing: border-box;
+  position: relative;
+  background: var(--tlw-bg);
+  color: var(--tlw-fg);
+  border: 1px solid var(--tlw-line-strong);
+  border-radius: 12px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.tlw *,
+.tlw *::before,
+.tlw *::after {
+  box-sizing: border-box;
+}
+
+/* ---- shared pieces ---- */
+
+.tlw__label {
+  color: var(--tlw-muted);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tlw__scale {
+  position: relative;
+}
+
+.tlw__tick {
+  position: absolute;
+  color: var(--tlw-muted);
+}
+
+.tlw__tick::before {
+  content: "";
+  position: absolute;
+  background: var(--tlw-line-strong);
+}
+
+.tlw__tick-label {
+  position: absolute;
+  white-space: nowrap;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tlw-muted);
+}
+
+.tlw__break {
+  position: absolute;
+  background:
+    repeating-linear-gradient(
+      var(--tlw-rot, 0deg),
+      var(--tlw-line-strong) 0 3px,
+      transparent 3px 6px
+    );
+}
+
+.tlw__tracks {
+  position: relative;
+}
+
+.tlw__lane {
+  position: relative;
+  cursor: grab;
+}
+
+.tlw__lane.is-grabbing {
+  cursor: grabbing;
+}
+
+.tlw__marker {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  line-height: 1;
+  color: var(--tlw-accent);
+  cursor: pointer;
+}
+
+.tlw__marker:not(.tlw__range):not(.tlw__cluster) {
+  min-width: 16px;
+  height: 16px;
+  font-size: 13px;
+  border-radius: 50%;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.tlw__marker:not(.tlw__range):not(.tlw__cluster):hover {
+  transform: translate(-50%, -50%) scale(1.25);
+  background: var(--tlw-accent-soft);
+}
+
+.tlw__cluster {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--tlw-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 1px 2px rgba(31, 35, 41, 0.18);
+  transition: transform 0.12s ease;
+}
+
+.tlw__cluster:hover {
+  transform: translate(-50%, -50%) scale(1.12);
+}
+
+.tlw__range {
+  border-radius: 6px;
+  background: var(--tlw-accent-soft);
+  border: 1px solid var(--tlw-accent);
+  transition: filter 0.12s ease;
+}
+
+.tlw__range:hover {
+  filter: brightness(0.96);
+}
+
+.tlw__selection {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  background: var(--tlw-accent-soft);
+  border-left: 1px dashed var(--tlw-accent);
+  border-right: 1px dashed var(--tlw-accent);
+}
+
+.tlw__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tlw-muted);
+  font-style: italic;
+}
+
+.tlw__empty[hidden] {
+  display: none;
+}
+
+/* ---- horizontal orientation ---- */
+
+.tlw--horizontal .tlw__axis,
+.tlw--horizontal .tlw__track {
+  display: grid;
+  grid-template-columns: var(--tlw-label) 1fr;
+  align-items: stretch;
+}
+
+.tlw--horizontal .tlw__axis {
+  border-bottom: 1px solid var(--tlw-line-strong);
+  background: #fcfcfd;
+}
+
+.tlw--horizontal .tlw__scale {
+  height: 34px;
+}
+
+.tlw--horizontal .tlw__label {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 12px;
+  border-right: 1px solid var(--tlw-line);
+}
+
+.tlw--horizontal .tlw__track {
+  border-bottom: 1px solid var(--tlw-line);
+}
+
+.tlw--horizontal .tlw__track:last-child {
+  border-bottom: none;
+}
+
+.tlw--horizontal .tlw__lane {
+  height: var(--tlw-lane);
+}
+
+.tlw--horizontal .tlw__tick {
+  top: 0;
+  bottom: 0;
+  width: 0;
+}
+
+.tlw--horizontal .tlw__tick::before {
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  height: 6px;
+}
+
+.tlw--horizontal .tlw__tick-label {
+  bottom: 9px;
+  left: 0;
+  transform: translateX(-50%);
+}
+
+.tlw--horizontal .tlw__break {
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  transform: translateX(-50%);
+  --tlw-rot: 180deg;
+}
+
+.tlw--horizontal .tlw__marker {
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.tlw--horizontal .tlw__range {
+  height: 10px;
+  transform: translateY(-50%);
+}
+
+.tlw--horizontal .tlw__selection {
+  left: var(--tlw-label);
+  top: 0;
+  bottom: 0;
+}
+
+/* ---- vertical orientation ---- */
+
+.tlw--vertical {
+  display: flex;
+  flex-direction: row;
+  height: 420px;
+}
+
+.tlw--vertical .tlw__axis {
+  display: flex;
+  flex-direction: column;
+  width: 64px;
+  flex: none;
+  border-right: 1px solid var(--tlw-line-strong);
+  background: #fcfcfd;
+}
+
+.tlw--vertical .tlw__axis-label {
+  height: var(--tlw-label-h);
+  flex: none;
+}
+
+.tlw--vertical .tlw__scale {
+  flex: 1;
+}
+
+.tlw--vertical .tlw__tracks {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+}
+
+.tlw--vertical .tlw__track {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--tlw-line);
+}
+
+.tlw--vertical .tlw__track:last-child {
+  border-right: none;
+}
+
+.tlw--vertical .tlw__label {
+  height: var(--tlw-label-h);
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--tlw-line);
+}
+
+.tlw--vertical .tlw__lane {
+  flex: 1;
+  width: 88px;
+}
+
+.tlw--vertical .tlw__tick {
+  left: 0;
+  right: 0;
+  height: 0;
+}
+
+.tlw--vertical .tlw__tick::before {
+  top: 0;
+  right: 0;
+  height: 1px;
+  width: 6px;
+}
+
+.tlw--vertical .tlw__tick-label {
+  top: 0;
+  right: 9px;
+  transform: translateY(-50%);
+}
+
+.tlw--vertical .tlw__break {
+  left: 0;
+  right: 0;
+  height: 4px;
+  transform: translateY(-50%);
+  --tlw-rot: 90deg;
+}
+
+.tlw--vertical .tlw__marker {
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.tlw--vertical .tlw__range {
+  width: 10px;
+  transform: translateX(-50%);
+}
+
+.tlw--vertical .tlw__selection {
+  top: var(--tlw-label-h);
+  left: 0;
+  right: 0;
+}
