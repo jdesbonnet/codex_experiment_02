@@ -2,6 +2,7 @@
 
 - [Widget documentation](docs/USAGE.md)
 - [Try the live demo on GitHub Pages](https://jdesbonnet.github.io/codex_experiment_02/)
+- [Try the v2 demo (fresh redesign) on GitHub Pages](https://jdesbonnet.github.io/codex_experiment_02/v2/)
 
 ## What this is
 A lightweight timeline widget that supports clustered events, zooming, optional range selection, and multiple tracks. The demo page (`index.html`) is configured to run directly on GitHub Pages.
